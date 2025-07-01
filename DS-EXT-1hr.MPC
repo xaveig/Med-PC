@@ -1,0 +1,299 @@
+\  EXTINCTION-1HR-DS
+\  MODIFIED FOR Z boxes- April 06
+
+\  Many variations on this basic procedure are possible.
+\  Only the right lever has been made active although data
+\  is collected on both levers.  The stimulus light above
+\  the right or left lever DOES NOTHING THROUGHOUT the procedure.
+\  Critical parameters may be set before issuing a START command
+\  with K-pulses (defaults given below and shown on the screen).
+\  NO syringe is used in this procedure.
+\  Data is automatically copied to disk (MED-PCIV\Data) at end - STOPABORTFLUSH
+
+\  CONSTANTS USED IN THIS PROGRAM
+
+\  Inputs:
+
+^LeftLeverResponse = 1
+^LeftLeverPosition = 2
+^RightLeverResponse = 3
+^RightLeverPosition = 4
+
+\  Outputs:
+
+^Left lever operate = 1
+^Right lever operate = 2
+^Pellet = 3
+^LeftStimLight = 4
+^RightStimLight = 5
+^Liquid = 6
+^HouseLight = 7
+^Pump = 8
+
+\  VARIABLES USED IN THIS PROGRAM
+
+\   A ARRAY =  Counters for program control
+\   A(0) = Fixed Ratio Setting (Default = 1)
+\   A(1) = Session Time in minutes (Default = 120 minutes)
+\   A(2) = Maximum number of injections (Default =  200)
+\   A(3) = Timeout following injection (Default = 20 seconds)
+\   A(4) = Line Indicator during set up
+
+\   B ARRAY =  Counters for data elements
+\   B(0) = LeftLever Responses
+\   B(1) = RightLever Responses
+\   B(2) = Number of Infusions
+\   B(3) = Time in Fixed Ratio in seconds
+\   B(4) = Lever Responses/minute (@ Fixed Ratio)
+
+\   C ARRAY =  IRT Array and event pen code for soft cum. recorder
+
+\   I  =  Subscript for the IRT Array C
+\   T  =  Clock Ticks for IRT's.  Resolution = 0.1 second.
+
+\   K-PULSES USED IN THIS PROGRAM TO SET PROG. CONTROL CTRS.
+
+\   K1   Adds 1 to the default value
+\   K2   Subtracts 1 from the default value
+\   K5   Adds 5 to the default value
+\   K6   Subtracts 5 from the default value
+\   K10  Adds 10 to the default value
+\   K11  Subtracts 10 from the default value
+\   K15  Cycles among various counters as indicated by LINE#
+\        where line 6 sets up the fixed ratio counter, A(0),
+\        line 11 sets up the session time, A(1), etc.
+\   Issue #START command to exit the setup procedure and begin
+\   a test session.
+
+\   Z-PULSES USED IN THIS PROGRAM
+
+\   Z1 =  Ratio State Set activated
+\   Z2 =  Reinforcement State Set activated
+\   Z3 =  Timeout State activated
+\   Z4 =  Reset Pulse for IRT Timer/Counter
+\   Z5 =  End of Session Pulse
+
+\   Dimension All Arrays
+
+LIST A = 1,60,200,20,6
+DIM B = 10
+DIM C = 10000
+
+
+\   *********************************************
+\        DISPLAY DEFAULT SET UP VALUES
+\          CHANGES MADE VIA K-PULSES
+\   *********************************************
+
+S.S.1,
+S1,
+   0.01":SHOW 1,Line#,A(4),6,Ratio,A(0),11,Sess_n,A(1),16,MaxInj,A(2);
+         SHOW 21,TimOut,A(3)--->S2
+
+S2,  \ SET Line #6, FIXED RATIO
+   #K15:SET A(4) = 11--->S9
+   #K1:SET A(0) = A(0)+1--->S9
+   #K2:SET A(0) = A(0)-1--->S9
+   #K5:SET A(0) = A(0)+5--->S9
+   #K6:SET A(0) = A(0)-5--->S9
+   #K10:SET A(0) = A(0)+10--->S9
+   #K11:SET A(0) = A(0)-10--->S9
+   #START:SET A(3) = A(3)*1"--->S10
+
+S3,  \ SET Line #11, SESSION TIME
+   #K15:SET A(4) = 16--->S9
+   #K1:SET A(1) = A(1)+1--->S9
+   #K2:SET A(1) = A(1)-1--->S9
+   #K5:SET A(1) = A(1)+5--->S9
+   #K6:SET A(1) = A(1)-5--->S9
+   #K10:SET A(1) = A(1)+10--->S9
+   #K11:SET A(1) = A(1)-10--->S9
+   #START:SET A(3) = A(3)*1"--->S10
+
+S4,  \ SET Line #16, MAXIMUM # OF INJECTIONS
+   #K15:SET A(4) = 21--->S9
+   #K1:SET A(2) = A(2)+1--->S9
+   #K2:SET A(2) = A(2)-1--->S9
+   #K5:SET A(2) = A(2)+5--->S9
+   #K6:SET A(2) = A(2)-5--->S9
+   #K10:SET A(2) = A(2)+10--->S9
+   #K11:SET A(2) = A(2)-10--->S9
+   #START:SET A(3) = A(3)*1"--->S10
+
+S5,  \ SET Line #21, TIMEOUT INTERVAL
+   #K15:SET A(4) = 6--->S9
+   #K1:SET A(3) = A(3)+1--->S9
+   #K2:SET A(3) = A(3)-1--->S9
+   #K5:SET A(3) = A(3)+5--->S9
+   #K6:SET A(3) = A(3)-5--->S9
+   #K10:SET A(3) = A(3)+10--->S9
+   #K11:SET A(3) = A(3)-10--->S9
+   #START:SET A(3) = A(3)*1"--->S10
+
+
+S9,
+   0.01":SHOW 1,Line#,A(4),6,Ratio,A(0),11,Sess_n,A(1),16,MaxInj,A(2);
+         SHOW 21,TimOut,A(3);
+         IF A(4) = 11 [@T,@F]
+            @T:--->S3
+            @F:IF A(4) = 16 [@T,@F]
+                  @T:--->S4
+                  @F:IF A(4) = 21 [@T,@F]
+                        @T:--->S5
+                        @F:--->S2
+
+S10,  \ Once a session is started prohibit changing
+      \ control counters with K-Pulses.
+
+    10':--->SX
+
+
+\   *********************************************
+\              MAIN PROGRAM FOR FIXED RATIO
+\   *********************************************
+
+S.S.2,
+S1,
+   #START:ON 1,2;Z1--->S2
+
+S2,
+   A(0)#R3:Z2--->S3
+   #Z5:OFF 1,2--->S4     \ End Session
+
+S3,
+   A(3)#T:Z1--->S2 \allows TO period
+
+S4,
+   5':--->SX    \ Holding State While Data is cleared
+
+\   *********************************************
+\   DATA COLLECTION (DISPLAY/COUNTERS/PRINT/ETC.)
+\   *********************************************
+
+S.S.4,  \  RightLever Responses
+S1,
+   #START:--->S2
+
+S2,      \  Count Right Lever Responses
+   #R 3:ADD B(1)--->SX
+   #Z5:--->S3
+
+S3,
+   5':--->SX    \ Holding State While Data is cleared
+
+S.S.5,  \  LeftLever Responses
+S1,
+   #START:--->S2
+
+S2,      \  Count Left Lever Responses
+   #R 1:ADD B(0)--->SX
+   #Z5:--->S3
+
+S3,
+   5':--->SX    \ Holding State While Data is cleared
+
+S.S.6,   \  Count Reinforcements and end session if max reached
+S1,
+   #START:--->S2
+
+S2,
+   #Z2:ADD B(2);IF B(2) = A(2) [@MaxInject,@Cont]
+           @MaxInject:SET B(4) = B(1)/B(3)*60;PRINT--->S3
+           @Cont:--->SX
+S3,
+   30":--->STOPABORTFLUSH
+
+S.S.7,   \  Update screen display
+S1,
+   #START:--->S2
+
+S2,
+   0.1":SHOW 6,Ratio,A(0),16,MaxInf,A(2),21,TimeOut,A(3)/1";
+      SHOW 1,LL#resp,B(0);
+      SHOW 2,RR#resp,B(1);
+      SHOW 3,Infusions,B(2);
+      SHOW 4,FRTime,B(3);
+      SHOW 5,SessTime,A(1)--->SX
+
+\ ***********************************************
+\    INCREMENT TIME T FOR IRT AND EVENT ARRAY
+\ ***********************************************
+
+S.S.8,
+S1,
+   #START--->S2
+
+S2,
+   #Z4--->S2
+   0.1":ADD T--->SX
+
+\ *****************************************************
+\      SET RESPONSE IRT'S AND EVENTS IN ARRAY C
+\ *****************************************************
+
+S.S.9,  \  SET RESPONSE IRT VALUES
+S1,
+   #START:SET C(I)=-987.987--->S2
+
+S2,
+   #R 3:SET C(I) = T+0.1, T = 0;Z4;
+                IF I = 10000 [@EndSession,@Cont]
+                   @End:Z5--->SX
+                   @Cont:ADD I;SET C(I) = -987.987--->SX
+
+   #R 1:SET C(I) = T+0.50, T = 0;Z4;
+                 IF I = 9999 [@EndSession,@Cont]
+                   @End:Z5--->SX
+                   @Cont:ADD I;SET C(I) = 0.60;
+                         ADD I; SET C(I) = -987.987--->SX
+
+S.S.10,   \ SET REINFORCEMENT MARK FOR SOFT CUM. RECORDER
+S1,
+   #START--->S2
+
+S2,
+   #Z2:SET C(I) = 0.2;IF I = 10000 [@EndSession,@Cont]
+                   @End:Z5--->SX
+                   @Cont:ADD I;SET C(I) = -987.987--->SX
+
+\   *********************************************
+\        INCREMENT TIME IN FIXED RATIO
+\   *********************************************
+
+S.S.11,
+S1,
+   #Z1:--->S2
+
+S2,
+   1":ADD B(3)--->SX
+   #Z2:--->S1
+   #Z5:--->S3
+
+S3,
+   5':--->SX    \ Holding State While Data is cleared
+
+\   *********************************************
+\                  SESSION CLOCK
+\   *********************************************
+
+S.S.12,
+S1,
+   #START:--->S2
+
+S2,
+   1':SUB A(1);IF A(1) <= 0 [@EndUnlessInfusionOn,@Continue]
+           @EndUnless:IF S.S.2 = 3 [@Wait,@EndSession]
+                 @Wait:--->S3
+                 @End:Z5--->S4
+
+           @Continue:--->SX
+
+S3,
+   #Z3:Z5--->S4
+
+S4,   \ Calculate Response Rate in Ratio
+   .01":SET B(4) = B(1)/B(3)*60--->S5
+
+S5,
+   10":--->STOPABORTFLUSH
+

@@ -1,0 +1,75 @@
+\  Food training.MPC
+
+\  This is a CRF schedule with a built in Fixed Time free reinforcer (default=20') 
+\  to help train responding on the right lever
+\  Written for boxes X and Y
+
+\INPUTS
+
+^LeftLeverResponse = 1
+^LeftLeverPosition = 2
+^RightLeverResponse = 3
+^RightLeverPosition = 4
+
+\OUTPUTS
+
+^Left lever operate = 1
+^Right lever operate = 2
+^Pellet = 3
+^LeftStimLight = 4
+^RightStimLight = 5
+^Liquid = 6
+^HouseLight = 7
+^Pump = 8
+
+\*****************************************
+\PROGRAM FOR TRAINING RIGHT LEVER RESPONSE
+\*****************************************
+
+S.S.1,       
+  
+S1,
+    #Start: ON 1,2,7---> S2
+
+S2,
+    #R3: ON 3 ---> S3
+
+S3,
+    0.1": OFF 3--->S2
+
+\****************************************
+\PROGRAM TO COUNT LEVERS RESPONSES
+\****************************************
+
+S.S.2,          
+
+S1,
+    #Start: ---> S2
+
+S2,
+    #R 1: Add a; Show 1, LeftLever, a ---> SX
+    #R 3: Add b; Show 2, RightLever, b ---> SX
+
+\****************************************
+\PROGRAM FOR THE FT FREE DELIVERY
+\****************************************
+
+S.S.3,           
+   S1,
+      #Start:--->S2
+   S2,
+      20':ON 3--->S3
+   S3,
+      0.1":OFF 3--->S2
+
+\*******************************
+\SESSION DURATION PROGRAM
+\*******************************
+
+S.S.4,             \End session if 15 hr elapse
+
+S1,
+    #Start: ---> S2
+
+S2,
+    900': ---> StopAbortFlush

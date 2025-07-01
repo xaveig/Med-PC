@@ -1,0 +1,329 @@
+\  1 hour program
+\  LFR-1.mpc - a modified version of 200lfr1.mpc
+\  which will store the infusion times in Array D
+\  and in a separate text file that will be auto-
+\  matically named for the subject id and can be
+\  read from the yokectrl.mpc procedure.
+\  Medical University of South Carolina
+
+
+\  VARIABLES USED IN THIS PROGRAM
+
+\   A ARRAY =  Counters for program control
+\   A(0) = Fixed Ratio Setting (Default = 1)
+\   A(1) = Session Time in minutes (Default = 60 minutes)
+\   A(2) = Maximum number of injections (Default =  200)
+\   A(3) = Timeout following injection (Default = 20 seconds)
+\   A(4) = Line Indicator during set up
+
+\   B ARRAY =  Counters for data elements
+\   B(0) = Correct Responses (@ Fixed Ratio)
+\   B(1) = Correct Responses (@ Infusion)
+\   B(2) = Correct Responses (@ Time out)
+\   B(3) = Incorrect Responses (@ Fixed Ratio)
+\   B(4) = Incorrect Responses (@ Infusion)
+\   B(5) = Incorrect Responses (@ Time out)
+\   B(6) = Time in Fixed Ratio in seconds
+\   B(7) = Number of Infusions
+\   B(8) = Lever Responses/minute (@ Fixed Ratio)
+
+\   C ARRAY =  IRT Array and event pen code for soft cum. recorder
+\   D ARRAY = Infusion times for yokectrl file.
+\   H = Handshake variable for Bkgrnd1.  H = 1 when file complete
+\   J = number of elements to be transferred. (will be one more
+\       then the last subscript to allow for element "0".
+
+\   I  =  Subscript for the IRT Array C
+\   Q  =  Clock Ticks for Infusion times.
+\   T  =  Clock Ticks for IRT's.  Resolution = 0.1 second.
+
+\   K-PULSES USED IN THIS PROGRAM TO SET PROG. CONTROL CTRS.
+
+\   K1   Adds 1 to the default value
+\   K2   Subtracts 1 from the default value
+\   K5   Adds 5 to the default value
+\   K6   Subtracts 5 from the default value
+\   K10  Adds 10 to the default value
+\   K11  Subtracts 10 from the default value
+\   K15  Cycles among various counters as indicated by LINE#
+\        where line 6 sets up the fixed ratio counter, A(0),
+\        line 11 sets up the session time, A(1), etc.
+\   Issue #START command to exit the setup procedure and begin
+\   a test session.
+
+\   Z-PULSES USED IN THIS PROGRAM
+
+\   Z1 =  Ratio State Set activated
+\   Z2 =  Reinforcement State Set activated
+\   Z3 =  Timeout State activated
+\   Z4 =  Reset Pulse for IRT Timer/Counter
+\   Z5 =  End of Session Pulse
+
+\   Dimension All Arrays
+
+LIST A = 1,60,200,20,6
+DIM B = 10
+DIM C = 1000
+DIM D = 500
+
+
+\   *********************************************
+\        DISPLAY DEFAULT SET UP VALUES
+\          CHANGES MADE VIA K-PULSES
+\   *********************************************
+
+S.S.1,
+S1,
+   0.01":SHOW 1,Line#,A(4),6,Ratio,A(0),11,Sess_n,A(1),16,MaxInj,A(2);
+         SHOW 21,TimOut,A(3)--->S2
+
+S2,  \ SET Line #6, FIXED RATIO
+   #K15:SET A(4) = 11--->S9
+   #K1:SET A(0) = A(0)+1--->S9
+   #K2:SET A(0) = A(0)-1--->S9
+   #K5:SET A(0) = A(0)+5--->S9
+   #K6:SET A(0) = A(0)-5--->S9
+   #K10:SET A(0) = A(0)+10--->S9
+   #K11:SET A(0) = A(0)-10--->S9
+   #START:SET A(3) = A(3)*1"--->S10
+
+S3,  \ SET Line #11, SESSION TIME
+   #K15:SET A(4) = 16--->S9
+   #K1:SET A(1) = A(1)+1--->S9
+   #K2:SET A(1) = A(1)-1--->S9
+   #K5:SET A(1) = A(1)+5--->S9
+   #K6:SET A(1) = A(1)-5--->S9
+   #K10:SET A(1) = A(1)+10--->S9
+   #K11:SET A(1) = A(1)-10--->S9
+   #START:SET A(3) = A(3)*1"--->S10
+
+S4,  \ SET Line #16, MAXIMUM # OF INJECTIONS
+   #K15:SET A(4) = 21--->S9
+   #K1:SET A(2) = A(2)+1--->S9
+   #K2:SET A(2) = A(2)-1--->S9
+   #K5:SET A(2) = A(2)+5--->S9
+   #K6:SET A(2) = A(2)-5--->S9
+   #K10:SET A(2) = A(2)+10--->S9
+   #K11:SET A(2) = A(2)-10--->S9
+   #START:SET A(3) = A(3)*1"--->S10
+
+S5,  \ SET Line #21, TIMEOUT INTERVAL
+   #K15:SET A(4) = 6--->S9
+   #K1:SET A(3) = A(3)+1--->S9
+   #K2:SET A(3) = A(3)-1--->S9
+   #K5:SET A(3) = A(3)+5--->S9
+   #K6:SET A(3) = A(3)-5--->S9
+   #K10:SET A(3) = A(3)+10--->S9
+   #K11:SET A(3) = A(3)-10--->S9
+   #START:SET A(3) = A(3)*1"--->S10
+
+
+S9,
+   0.01":SHOW 1,Line#,A(4),6,Ratio,A(0),11,Sess_n,A(1),16,MaxInj,A(2);
+         SHOW 21,TimOut,A(3);
+         IF A(4) = 11 [@T,@F]
+            @T:--->S3
+            @F:IF A(4) = 16 [@T,@F]
+                  @T:--->S4
+                  @F:IF A(4) = 21 [@T,@F]
+                        @T:--->S5
+                        @F:--->S2
+
+S10,  \ Once a session is started prohibit changing
+      \ control counters with K-Pulses.
+
+    10':--->SX
+
+
+\   *********************************************
+\              MAIN PROGRAM FOR FIXED RATIO
+\   *********************************************
+
+S.S.2,
+S1,
+   #START:ON 1,2,7;Z1--->S2
+S2,
+
+   A(0)#R1:ON 8,4;Z2--->S3
+   #Z5:OFF 1,2,7--->S5     \  End Session
+
+S3,
+  2.72":OFF 8;Z3--->S4
+
+S4,
+   A(3)#T:OFF 4;Z1--->S2
+
+S5,
+   20":--->STOPABORTFLUSH   \ Holding State While Data is cleared
+
+\   *********************************************
+\   DATA COLLECTION (DISPLAY/COUNTERS/PRINT/ETC.)
+\   *********************************************
+
+S.S.4,  \  Correct Responses
+S1,
+   #START:--->S2
+
+S2,      \  Count Responses ratio
+   #R1:ADD B(0)--->SX
+   #Z2:--->S3
+   #Z5:--->S5
+
+S3,      \  Count Responses during infusion
+   #R1:ADD B(1)--->SX
+   #Z3:--->S4
+   #Z5:--->S5
+
+S4,      \  Count Responses during time out
+   #R1:ADD B(2)--->SX
+   #Z1:--->S2
+   #Z5:--->S5
+
+S5,
+   5':--->SX    \ Holding State While Data is cleared
+
+S.S.5,  \  Incorrect Responses
+S1,
+   #START:--->S2
+
+S2,      \  Count Incorrect Responses
+   #R3:ADD B(3)--->SX
+   #Z5:--->S3
+
+S3,
+   20":--->SX    \ Holding State While Data is cleared
+
+S.S.6,   \  Count Reinforcements and end session if max reached
+S1,
+   #START:--->S2
+
+S2,
+   #Z2:ADD B(4);IF B(4) >= A(2) [@MaxInject,@Cont]
+           @MaxInject: Z5 ---> S3
+           @Cont:--->SX
+S3,
+   20"--->STOPABORTFLUSH
+
+\  All closing calculations were moved to the session clock to
+\  insure saving array D and make the closing the same regardless
+\  if the session ends on max injection or session time.
+
+S.S.7,   \  Update screen display
+S1,
+   #START:--->S2
+
+S2,
+   1":SHOW 1,Ratio,A(0),3,Inject,B(0);
+      SHOW 6,cor_FR,B(0),8,cor_INF,B(1),10,cor_TO,B(2);
+      SHOW 11,incor_LP,B(3);
+      SHOW 16,FRTime,B(6),21,Sess_n,A(1),26,MaxInj,A(2);
+      SHOW 31,TimOut,A(3)/1"--->SX
+
+\ ***********************************************
+\    INCREMENT TIME T FOR RESPONSE IRT's and
+\     EVENT PIPS and "Q" for infusion times
+\ ***********************************************
+
+S.S.8,
+S1,
+   #START--->S2
+
+S2,
+   #Z4--->S2
+   0.1":ADD T; SET Q = Q + 0.1 ---> SX
+
+\ *****************************************************
+\      SET RESPONSE IRT'S AND EVENTS IN ARRAY C
+\ *****************************************************
+
+S.S.9,  \  SET RESPONSE IRT VALUES
+S1,
+   #START: set C(I)=-987.987 --->S2
+
+S2,
+   #R1:SET C(I) = T+0.1, T = 0;Z4;
+                IF I = 1000 [@EndSession,@Cont]
+                   @End:Z5--->SX
+                   @Cont:ADD I;SET C(I) = -987.987--->SX
+
+   #R3:SET C(I) = T+0.50, T = 0;Z4;
+                 IF I = 999 [@EndSession,@Cont]
+                   @End:Z5--->SX
+                   @Cont:ADD I;SET C(I) = 0.60;
+                         ADD I; SET C(I) = -987.987--->SX
+
+S.S.10,   \ SET REINFORCEMENT MARK FOR SOFT CUM. RECORDER
+S1,
+   #START--->S2
+
+S2,
+   #Z2:SET C(I) = 0.2;IF I = 1000 [@EndSession,@Cont]
+                   @End:Z5--->SX
+                   @Cont:ADD I;SET C(I) = -987.987--->SX
+
+\   *********************************************
+\        INCREMENT TIME IN FIXED RATIO
+\   *********************************************
+
+S.S.11,
+S1,
+   #Z1:--->S2
+
+S2,
+   1":ADD B(6)--->SX
+   #Z2:--->S1
+   #Z5:--->S3
+
+S3,
+   20":--->SX    \ Holding State While Data is cleared
+
+\   *********************************************
+\              INFUSION TIME DATA COLLECTION
+\              including BKGRND1 for creating
+\              text file for yokectrl.mpc
+\   *********************************************
+
+S.S.12
+S1,
+
+  #START: SET D(J) = -987.987 ---> S2
+
+S2,      \ Wait for infusion signal Z2
+
+  #Z2: SET D(J)= Q, J=J+1, D(J)= -987.987 ---> SX
+  #Z5: ---> S1  \  
+
+
+\   *********************************************
+\                  SESSION CLOCK
+\   *********************************************
+
+S.S.13,
+S1,
+   #START:--->S2
+
+S2,
+   1':SUB A(1);IF A(1) <= 0 [@EndUnlessInfusionOn,@Continue]
+           @EndUnless:IF S.S.2 = 3 [@Wait,@EndSession]
+                 @Wait:--->S3
+                 @End:Z5--->S4
+           @Continue:--->SX
+   #Z5: ---> S4    \  End on max infusion
+
+S3,
+   #Z3:Z5--->S4
+
+S4,   \ Calculate Response Rate in Ratio. Add print command
+      \ here if desired.   BKGRND1 Saves the infusion times
+      \ to a txt file for yokectrl based on subject id.
+
+   #Z5:SET B(8) = B(0)/B(6)*60; BKGRND1 ---> S5
+
+S5,   \ Wait for bkgrnd1 to finish
+
+   1": IF H = 1 [] ---> S6
+
+S6,   \ This ends the procedure and saves the data file automatically
+
+   20": ---> STOPABORTFLUSH
+
